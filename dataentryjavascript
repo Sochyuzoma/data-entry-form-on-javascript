@@ -1,0 +1,97 @@
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const formws = ss.getSheetByName('FORM');
+  const settingsws = ss.getSheetByName('SETTINGS');
+
+  const dataws = ss.getSheetByName('DATA');
+
+  const idCell = formws.getRange('B2');
+
+  const fieldRange = ['B6','B8','B10', 'B12','B14','B16','B18', 'B20','B23']
+
+  const fieldRangers = ['B6','B8','B10', 'B12','B14','B16','B18', 'B20']
+
+  const searchCell = formws.getRange("B4");
+
+function saverecord() {
+
+  const id = idCell.getValue()
+
+  if(id == ""){
+    createNewRecord()
+    return
+  }
+  const cellFound = dataws.getRange("A:A").createTextFinder(id).matchCase(true).matchEntireCell(true).findNext()
+  if(!cellFound) return
+
+  const row = cellFound.getRow()
+  console.log(row)
+
+  const fieldValues = fieldRange.map(f => formws.getRange(f).getValue());
+  fieldValues.unshift(id)
+  dataws.getRange(row,1,1,fieldValues.length).setValues([fieldValues])
+  ss.toast("id:" + id, "Changes saved!")
+
+}
+
+
+function createNewRecord() {
+
+
+  const fieldValues = fieldRange.map(f => formws.getRange(f).getValue());
+
+  const nextIDCell = settingsws.getRange('H2');
+  const nextID = nextIDCell.getValue();
+
+  fieldValues.unshift(nextID);
+
+  // console.log(fieldValues);
+
+  dataws.appendRow(fieldValues);
+  idCell.setValue(nextID);
+  nextIDCell.setValue(nextID+1);
+  ss.toast( "id:" + nextID, "New Record Created")
+  
+}
+
+function newrecord(){
+  fieldRangers.forEach(f => formws.getRange(f).clearContent());
+  idCell.clearContent();
+  searchCell.clearContent();
+
+}
+
+function search(){
+
+  const searchValue = searchCell.getValue()
+  const data = dataws.getRange("A2:K").getValues()
+  const recordsfound = data.filter(r => r[10] == searchValue)
+  if(recordsfound.length === 0) return
+  idCell.setValue(recordsfound[0][0])
+  fieldRange.forEach((f,i) => formws.getRange(f).setValue(recordsfound[0][i+1]))
+
+
+}
+
+function deleteRecord(){
+
+  const id = idCell.getValue()
+
+  if(id == "") return
+  const cellFound = dataws.getRange("A:A").createTextFinder(id).matchCase(true).matchEntireCell(true).findNext()
+  if(!cellFound) return
+
+  const row = cellFound.getRow()
+  dataws.deleteRow(row)
+  newrecord()
+  ss.toast("id:" + id,"Record Deleted!")
+  }
+
+function onEdit(e) {
+
+  if(e.range.getA1Notation() !== "B4") return
+    if(e.source.getSheetName() !== "FORM") return
+  SpreadsheetApp.getActiveRange().getA1Notation()
+  search()
+}
